@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Haircut Recommender</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel intro">
+        <h1>AI Haircut Recommender</h1>
+        <p>Upload a clear face photo to detect your face shape, age, gender, and get haircut ideas tailored to you.</p>
+      </section>
+      <section class="panel uploader">
+        <form id="upload-form">
+          <label class="upload-label" for="photo">Face photo</label>
+          <input type="file" id="photo" name="photo" accept="image/*" required />
+          <div class="preview-wrap" id="preview-wrap" hidden>
+            <img id="preview" alt="Selected photo preview" />
+          </div>
+          <button type="submit" id="analyze-btn">Analyze</button>
+        </form>
+        <p class="hint">No photo is stored—it's only used for generating a recommendation via the backend.</p>
+      </section>
+
+      <section class="panel results" id="results" hidden>
+        <h2>Results</h2>
+        <div class="result-grid">
+          <div class="result-left">
+            <div class="preview-box"><img id="results-preview" alt="Analysis preview" /></div>
+          </div>
+          <div class="result-right">
+            <div class="result-row"><span class="result-label">Detected face shape:</span> <span class="result-value" id="face-shape">-</span></div>
+            <div class="result-row"><span class="result-label">Gender:</span> <span class="result-value" id="gender">-</span></div>
+            <div class="result-row"><span class="result-label">Age:</span> <span class="result-value" id="age">-</span></div>
+            <div class="result-row"><span class="result-label">Age group:</span> <span class="result-value" id="age-group">-</span></div>
+            <div class="result-row"><span class="result-label">Confidence:</span> <span class="result-value" id="confidence">-</span></div>
+            <div id="measurements" class="measurements">
+              <h3>Measurements</h3>
+              <div class="result-row" id="m-row-forehead"><span class="result-label">Forehead:</span> <span id="m-forehead">-</span></div>
+              <div class="result-row" id="m-row-cheek"><span class="result-label">Cheekbone:</span> <span id="m-cheek">-</span></div>
+              <div class="result-row" id="m-row-jaw"><span class="result-label">Jaw:</span> <span id="m-jaw">-</span></div>
+              <div class="result-row" id="m-row-length"><span class="result-label">Face length:</span> <span id="m-length">-</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel suggestions-panel">
+          <h3>Suggested haircuts</h3>
+          <div id="suggestions" class="suggestions-grid"></div>
+        </div>
+      </section>
+
+      <section class="panel status">
+        <p id="status-message"></p>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
+

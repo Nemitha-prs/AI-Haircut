@@ -1,0 +1,6 @@
+[
+  {"name":"Modern Quiff","shape":["oval","long","square"],"description":"Quiff with volume for teens who want style.","image":"https://images.unsplash.com/photo-1524503033411-c9566986fc8f?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Textured Fringe","shape":["round","oval","heart"],"description":"Fringed top with texture to soften the face.","image":"https://images.unsplash.com/photo-1520975919519-2b66f5b2d6e7?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Fade with Length","shape":["square","round","diamond"],"description":"Faded sides with length on top for versatility.","image":"https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Spiky Top","shape":["oval","round","long"],"description":"Classic spiky top for a youthful edge.","image":"https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=80"}
+]

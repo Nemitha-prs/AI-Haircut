@@ -1,0 +1,5 @@
+[
+  {"name":"Crew Cut","shape":["square","round","diamond"],"description":"Short, easy crew cut for active kids.","image":"https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Short Textured Top","shape":["oval","round","long"],"description":"Short sides with a slightly textured top.","image":"https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Buzz Cut","shape":["round","square","heart"],"description":"Simple and low-maintenance buzz cut.","image":"https://images.unsplash.com/photo-1520975919519-2b66f5b2d6e7?auto=format&fit=crop&w=800&q=80"}
+]

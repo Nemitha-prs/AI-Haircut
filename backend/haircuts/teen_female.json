@@ -1,0 +1,6 @@
+[
+  {"name":"Layered Lob","shape":["oval","round","long"],"description":"A lob with layers for movement.","image":"https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Curtain Bangs","shape":["oval","heart","diamond"],"description":"Curtain bangs paired with medium length hair.","image":"https://images.unsplash.com/photo-1503342217505-b0a15a0c2f6b?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Side Swept Bob","shape":["round","square","oval"],"description":"Sleek side-swept bob for a sophisticated look.","image":"https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Textured Shag","shape":["long","heart","oval"],"description":"Trendy shag with texture and layers.","image":"https://images.unsplash.com/photo-1517363898874-7371a4d8b0d6?auto=format&fit=crop&w=800&q=80"}
+]

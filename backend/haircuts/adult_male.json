@@ -1,0 +1,7 @@
+[
+  {"name":"Textured Crop","shape":["square","round","oval","diamond"],"description":"Short cropped sides with textured top for a modern look.","image":"https://images.unsplash.com/photo-1520975919519-2b66f5b2d6e7?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Side Part","shape":["oval","round","square","long"],"description":"Classic side part with longer top and short sides.","image":"https://images.unsplash.com/photo-1531123414780-f03b34f1a4e8?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Undercut","shape":["oval","long","heart"],"description":"Undercut with volume on top, works well for many face shapes.","image":"https://images.unsplash.com/photo-1524503033411-c9566986fc8f?auto=format&fit=crop&w=800&q=80"},
+  {"name":"Slicked Back","shape":["round","square","long"],"description":"Sleek slicked-back look for defined features.","image":"https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=800&q=80"},
+  {"name":"French Crop","shape":["oval","heart","diamond"],"description":"Short and textured with minimal length on top.","image":"https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=80"}
+]

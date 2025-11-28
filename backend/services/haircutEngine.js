@@ -73,6 +73,7 @@ function normalizeEntry(e) {
     gender: (e.gender || 'unknown').toLowerCase(),
     ageGroups: Array.isArray(e.ageGroups) ? e.ageGroups : (e.ageGroups ? [e.ageGroups] : []),
     faceShapes: Array.isArray(e.faceShapes) ? e.faceShapes : (e.faceShapes ? [e.faceShapes] : (e.shape ? (Array.isArray(e.shape) ? e.shape : [e.shape]) : [])),
+    ethnicity: Array.isArray(e.ethnicity) ? e.ethnicity : (e.ethnicity ? [e.ethnicity] : ['all']),
     hairLength: e.hairLength || e.length || 'medium',
     hairType: e.hairType || e.type || 'straight',
     description: e.description || '',
@@ -93,11 +94,22 @@ function uniqueByImage(arr) {
   return out;
 }
 
-function scoreEntry(entry, { gender, ageGroup, faceShape }) {
+function scoreEntry(entry, { gender, ageGroup, faceShape, ethnicity }) {
   let score = 0;
-  if (entry.faceShapes && faceShape && entry.faceShapes.includes(faceShape)) score += 3;
+  // Face shape match (most important)
+  if (entry.faceShapes && faceShape && entry.faceShapes.includes(faceShape)) score += 4;
+  // Age group match (very important)
   if (entry.ageGroups && ageGroup && entry.ageGroups.includes(ageGroup)) score += 3;
+  // Gender match (important)
   if (entry.gender && gender && entry.gender === gender) score += 2;
+  // Ethnicity match (bonus - if ethnicity is specified and matches, or if entry supports all ethnicities)
+  if (ethnicity && ethnicity !== 'unknown') {
+    if (entry.ethnicity && (entry.ethnicity.includes('all') || entry.ethnicity.includes(ethnicity))) {
+      score += 1.5;
+    }
+  } else if (entry.ethnicity && entry.ethnicity.includes('all')) {
+    score += 0.5; // Small bonus for universal styles
+  }
   return score;
 }
 
@@ -110,9 +122,9 @@ function shuffleArray(arr) {
 
 /**
  * Recommend hairstyles.
- * options: { min:6, max:10 }
+ * options: { min:6, max:10, gender, ageGroup, faceShape, ethnicity }
  */
-export async function recommend({ gender, ageGroup, faceShape, min = 6, max = 10 } = {}) {
+export async function recommend({ gender, ageGroup, faceShape, ethnicity, min = 6, max = 10 } = {}) {
   const dataset = await loadDataset();
   if (!dataset || dataset.length === 0) return [];
 
@@ -122,7 +134,15 @@ export async function recommend({ gender, ageGroup, faceShape, min = 6, max = 10
   // 2. Filter by ageGroup
   candidates = candidates.filter(e => Array.isArray(e.ageGroups) && e.ageGroups.includes(ageGroup));
 
-  // 3. Filter by faceShape: prefer exact matches, but if too few, include non-matching
+  // 3. Filter by ethnicity (if specified and not unknown)
+  if (ethnicity && ethnicity !== 'unknown') {
+    candidates = candidates.filter(e => 
+      Array.isArray(e.ethnicity) && 
+      (e.ethnicity.includes('all') || e.ethnicity.includes(ethnicity))
+    );
+  }
+
+  // 4. Filter by faceShape: prefer exact matches, but if too few, include non-matching
   let faceMatches = candidates.filter(e => Array.isArray(e.faceShapes) && e.faceShapes.includes(faceShape));
   let nonFaceMatches = candidates.filter(e => !(Array.isArray(e.faceShapes) && e.faceShapes.includes(faceShape)));
 
@@ -141,7 +161,7 @@ export async function recommend({ gender, ageGroup, faceShape, min = 6, max = 10
 
   // Score each in pool
   const scored = pool.map(e => {
-    const base = scoreEntry(e, { gender, ageGroup, faceShape });
+    const base = scoreEntry(e, { gender, ageGroup, faceShape, ethnicity });
     // slight random jitter so results vary
     const jitter = (Math.random() - 0.5) * 0.6; // +/-0.3
     return { entry: e, score: base + jitter };
@@ -165,8 +185,15 @@ export async function recommend({ gender, ageGroup, faceShape, min = 6, max = 10
   if (unique.length < min) {
     // broaden candidates to same gender across ages
     let broad = dataset.filter(e => e.gender === (gender || e.gender));
+    // Filter by ethnicity if specified
+    if (ethnicity && ethnicity !== 'unknown') {
+      broad = broad.filter(e => 
+        Array.isArray(e.ethnicity) && 
+        (e.ethnicity.includes('all') || e.ethnicity.includes(ethnicity))
+      );
+    }
     // score broad
-    const scoredBroad = broad.map(e => ({ entry: e, score: scoreEntry(e, { gender, ageGroup, faceShape }) + (Math.random() - 0.5) * 0.4 }));
+    const scoredBroad = broad.map(e => ({ entry: e, score: scoreEntry(e, { gender, ageGroup, faceShape, ethnicity }) + (Math.random() - 0.5) * 0.4 }));
     scoredBroad.sort((a, b) => b.score - a.score);
     for (const s of scoredBroad) {
       if (!s.entry.image) continue;

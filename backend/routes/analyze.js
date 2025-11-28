@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { analyzeFace } from '../services/openaiVision.js';
-import { recommend } from '../services/haircutEngine.js';
+import { recommendHairstyles, createUserProfile } from '../services/hairstyleMatcher.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -59,54 +59,56 @@ router.post('/', upload.single('photo'), async (req, res) => {
       return res.status(502).json({ error: 'Face analysis failed', detail: msg });
     }
 
-    const { ageGroup, gender, faceShape } = analysis;
-
     // Validate that we got meaningful results
-    if (faceShape === 'unknown' || gender === 'unknown' || ageGroup === 'unknown') {
+    if (analysis.faceShape === 'unknown' || analysis.gender === 'unknown' || analysis.ageGroup === 'unknown') {
       return res.status(400).json({ 
         error: 'Could not detect face attributes. Please ensure the image contains a clear face.' 
       });
     }
 
-    // Use haircutEngine to get recommendations
-    const recs = await recommend({ 
-      gender, 
-      ageGroup, 
-      faceShape, 
-      min: 6, 
-      max: 10 
-    });
-    
-    const suggestions = recs.map(h => ({ 
-      name: h.name, 
-      image: h.image, 
-      description: h.description, 
-      hairLength: h.hairLength, 
-      hairType: h.hairType, 
-      faceShapes: h.faceShapes 
-    }));
+    // Create user profile from analysis
+    const userProfile = createUserProfile(analysis);
 
-    // Extract age from ageGroup for display (optional, approximate)
-    let age = null;
-    if (ageGroup.includes('child')) age = 10;
-    else if (ageGroup.includes('teen')) age = 15;
-    else if (ageGroup.includes('adult')) age = 30;
+    // Get hairstyle recommendations from database
+    let recommendedStyles = [];
+    try {
+      recommendedStyles = await recommendHairstyles(userProfile, 6);
+    } catch (dbError) {
+      console.warn('Database not available or empty, using fallback:', dbError.message);
+      // Fallback: return empty recommendations with message
+      recommendedStyles = [];
+    }
 
+    // Return in the required format
     return res.json({
-      faceShape,
-      confidence: 0.95, // OpenAI Vision is generally reliable, set high confidence
-      gender,
-      age,
-      ageGroup,
-      measurements: {
-        // OpenAI Vision doesn't provide pixel measurements, so we'll leave these null
-        // Frontend will hide these rows automatically
-        foreheadWidth: null,
-        cheekboneWidth: null,
-        jawWidth: null,
-        faceLength: null,
+      userProfile: {
+        ageGroup: userProfile.ageGroup,
+        gender: userProfile.gender,
+        faceShape: userProfile.faceShape,
+        ethnicity: userProfile.ethnicity,
+        jawShape: userProfile.jawShape,
+        foreheadSize: userProfile.foreheadSize,
+        hairlineShape: userProfile.hairlineShape,
+        currentHairLength: userProfile.currentHairLength,
+        hairType: userProfile.hairType,
+        hairDensity: userProfile.hairDensity,
+        skinTone: userProfile.skinTone,
+        faceProportions: userProfile.faceProportions,
       },
-      suggestions,
+      recommendedStyles: recommendedStyles.map(style => ({
+        name: style.name,
+        why_it_matches: style.why_it_matches || [],
+        image: style.image,
+        hairLength: style.hairLength,
+        hairType: style.hairType,
+        description: style.description,
+      })),
+      // Legacy fields for backward compatibility with frontend
+      faceShape: userProfile.faceShape,
+      gender: userProfile.gender,
+      ageGroup: userProfile.ageGroup,
+      ethnicity: userProfile.ethnicity,
+      confidence: 0.95,
     });
   } catch (err) {
     console.error('analyze error', err);

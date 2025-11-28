@@ -1,0 +1,99 @@
+═══════════════════════════════════════════════════════════════
+  QUICK GUIDE: Setting Up OpenAI Project Key
+═══════════════════════════════════════════════════════════════
+
+STEP 1: Get Your OpenAI Project Key
+───────────────────────────────────────────────────────────────
+
+1. Go to: https://platform.openai.com/api-keys
+2. Sign in to your OpenAI account
+3. ⚠️ IMPORTANT: Check the project dropdown at the top
+   - Make sure you're in the CORRECT project
+   - If you need to, switch to the right project
+4. Click "Create new secret key"
+5. Give it a name (optional): "Haircut AI App"
+6. Click "Create secret key"
+7. ⚠️ COPY THE KEY IMMEDIATELY - you won't see it again!
+8. The key will look like: sk-proj-abc123def456... (150+ characters)
+9. Key MUST start with "sk-proj-" (this is a project key)
+
+STEP 2: Add Key to .env File
+───────────────────────────────────────────────────────────────
+
+1. Open: backend/.env
+2. Add this line (replace with your actual project key):
+
+   OPENAI_API_KEY=sk-proj-your-complete-project-key-here
+
+⚠️ IMPORTANT FORMAT:
+   • NO quotes around the key
+   • NO spaces before or after the = sign
+   • Key must be on ONE line (don't press Enter)
+   • Copy the ENTIRE key (150+ characters)
+   • Key MUST start with sk-proj-
+
+STEP 3: Save and Test
+───────────────────────────────────────────────────────────────
+
+1. Save the .env file (Ctrl+S)
+2. Test your project key:
+
+   cd backend
+   node test-key.js
+
+3. You should see: ✅ SUCCESS! Your API key is working!
+
+STEP 4: Start Server
+───────────────────────────────────────────────────────────────
+
+   cd backend
+   npm start
+
+═══════════════════════════════════════════════════════════════
+
+EXAMPLE .env FILE:
+───────────────────────────────────────────────────────────────
+
+OPENAI_API_KEY=sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567...
+PORT=3000
+
+═══════════════════════════════════════════════════════════════
+
+COMMON MISTAKES:
+───────────────────────────────────────────────────────────────
+
+❌ WRONG: OPENAI_API_KEY = "sk-proj-..."  (has spaces and quotes)
+❌ WRONG: OPENAI_API_KEY=sk-proj-abc      (key is incomplete)
+❌ WRONG: OPENAI_API_KEY=sk-abc123        (not a project key - missing "proj-")
+❌ WRONG: OPENAI_API_KEY=sk-proj-abc      (key split across lines)
+          xyz789
+
+✅ CORRECT: OPENAI_API_KEY=sk-proj-YourCompleteProjectKeyHereOnOneLine
+
+═══════════════════════════════════════════════════════════════
+
+PROJECT KEY REQUIREMENTS:
+───────────────────────────────────────────────────────────────
+
+Your OpenAI project must have:
+✅ API access enabled
+✅ Credits/quota available
+✅ Access to Vision models (gpt-4o-mini)
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+───────────────────────────────────────────────────────────────
+
+If you get "401 Authentication failed":
+1. Make sure key starts with "sk-proj-" (project key)
+2. Make sure key is complete (not cut off)
+3. Check no quotes/spaces in .env file
+4. Verify you're in the correct project in OpenAI dashboard
+5. Check project has credits/quota available
+6. Verify project has Vision API access
+7. Create a NEW project key
+8. Restart server after changing .env
+
+═══════════════════════════════════════════════════════════════
+

@@ -49,7 +49,7 @@ STEP 4: Start Server
 EXAMPLE .env FILE:
 ───────────────────────────────────────────────────────────────
 
-OPENAI_API_KEY=sk-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567
+OPENAI_API_KEY=sk-
 PORT=3000
 
 ═══════════════════════════════════════════════════════════════

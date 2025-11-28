@@ -1,0 +1,39 @@
+═══════════════════════════════════════════════════════════════
+  QUICK GUIDE: Adding Your OpenAI Project Key
+═══════════════════════════════════════════════════════════════
+
+STEP 1: Open the .env file
+   Location: backend/.env
+
+STEP 2: Add your project key in this EXACT format:
+
+   OPENAI_API_KEY=sk-proj-YourCompleteKeyHere
+
+   ⚠️ IMPORTANT RULES:
+   • NO quotes around the key
+   • NO spaces before or after the = sign
+   • Key must be on ONE single line (no line breaks)
+   • Copy the ENTIRE key (it's very long - 150+ characters)
+
+STEP 3: Save the file
+
+STEP 4: Restart your server
+   Stop the server (Ctrl+C) and run: npm start
+
+═══════════════════════════════════════════════════════════════
+
+EXAMPLE of CORRECT format:
+───────────────────────────────────────────────────────────────
+OPENAI_API_KEY=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
+───────────────────────────────────────────────────────────────
+
+COMMON MISTAKES:
+❌ OPENAI_API_KEY = sk-proj-...  (has spaces)
+❌ OPENAI_API_KEY="sk-proj-..."  (has quotes)
+❌ OPENAI_API_KEY=sk-proj-abc    (key is incomplete/cut off)
+
+═══════════════════════════════════════════════════════════════
+
+For detailed instructions, see: PROJECT_KEY_SETUP.md
+
+

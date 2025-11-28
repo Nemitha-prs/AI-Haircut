@@ -1,12 +1,15 @@
 import dotenv from 'dotenv';
-
-// Load environment variables ASAP before importing modules that read them
-dotenv.config();
-
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env file in the backend directory
+// Use override: true to ensure new values replace any existing ones
+dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
 // Dynamically import the analyze router after env is loaded to avoid
 // services reading uninitialised process.env during static import.
@@ -15,8 +18,6 @@ const { default: analyzeRouter } = await import('./routes/analyze.js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const frontendDir = path.join(__dirname, '..', 'frontend');
 
 app.use(cors());

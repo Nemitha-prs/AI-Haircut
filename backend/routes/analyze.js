@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { analyzeFace } from '../services/openaiVision.js';
-import { recommendHairstyles, createUserProfile } from '../services/hairstyleMatcher.js';
+import { recommend } from '../services/haircutEngine.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -59,41 +59,186 @@ router.post('/', upload.single('photo'), async (req, res) => {
       return res.status(502).json({ error: 'Face analysis failed', detail: msg });
     }
 
-    // Validate that we got meaningful results
-    if (analysis.faceShape === 'unknown' || analysis.gender === 'unknown' || analysis.ageGroup === 'unknown') {
-      return res.status(400).json({ 
-        error: 'Could not detect face attributes. Please ensure the image contains a clear face.' 
+    // STRICT FACE VALIDATION — reject ANY image without a real, single human face
+    if (!analysis || typeof analysis !== "object") {
+      return res.status(400).json({
+        success: false,
+        error: "Unable to analyze the image. Please upload a clear photo with a human face."
       });
     }
 
-    // Create user profile from analysis
-    const userProfile = createUserProfile(analysis);
+    // No face detected at all
+    if (analysis.noFaceDetected === true ||
+        analysis.faceDetected === false ||
+        analysis.faceCount === 0 ||
+        !analysis.faceShape) {
+      return res.status(400).json({
+        success: false,
+        error: "No face detected. Please upload a clear photo with a human face."
+      });
+    }
 
-    // Get hairstyle recommendations from database
+    // Multiple faces detected
+    if (analysis.multipleFaces === true ||
+        (typeof analysis.faceCount === "number" && analysis.faceCount > 1)) {
+      return res.status(400).json({
+        success: false,
+        error: "Multiple faces detected. Please upload a photo with only one face."
+      });
+    }
+
+    // Face exists but model is uncertain or outputs default/fallback values
+    const invalidFaceShapes = ["unknown", "uncertain", "none", null, undefined];
+    if (!analysis.faceShape || invalidFaceShapes.includes(String(analysis.faceShape).toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        error: "Face not recognized clearly. Please upload a well-lit photo with a visible face."
+      });
+    }
+
+    // Strict quality checks
+    if (
+      analysis.tooBlurry === true ||
+      analysis.imageQuality === "poor" ||
+      analysis.imageQuality === "blurry" ||
+      analysis.confidence < 0.5
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Image quality is too low. Please upload a clear, high-quality face photo."
+      });
+    }
+
+    // IMAGE ERROR HANDLING: Check if face detection was successful
+    if (!analysis || typeof analysis !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to analyze the image. Please upload a clear photo with one face.'
+      });
+    }
+
+    // Check for no face detected
+    if (analysis.noFaceDetected === true || analysis.faceDetected === false) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to detect a face in the image. Please upload a clear photo with one face.'
+      });
+    }
+
+    // Check for multiple faces
+    if (analysis.multipleFaces === true || (analysis.faceCount && analysis.faceCount > 1)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Multiple faces detected. Please upload a photo with only one face.'
+      });
+    }
+
+    // Check for image quality issues
+    if (analysis.tooBlurry === true || analysis.imageQuality === 'poor' || analysis.imageQuality === 'blurry') {
+      return res.status(400).json({
+        success: false,
+        error: 'Image quality is too low or blurry. Please upload a clearer photo.'
+      });
+    }
+
+    // If face presence is unclear, require explicit single face detection
+    if (analysis.faceCount === 0 || analysis.faceDetected === false) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to detect a face in the image. Please upload a clear photo with one face.'
+      });
+    }
+    if (typeof analysis.faceCount === 'number' && analysis.faceCount !== 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Multiple faces detected. Please upload a photo with only one face.'
+      });
+    }
+
+    // Check if essential analysis fields are missing
+    if (!analysis.gender && !analysis.faceShape && !analysis.ageGroup) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to extract face features from the image. Please upload a clear, well-lit photo.'
+      });
+    }
+
+    // Coerce analysis fields to strict allowed categories
+    const allowedGender = ['male', 'female'];
+    const allowedAge = ['adult-male', 'adult-female', 'teen-boy', 'teen-girl', 'child-boy', 'child-girl'];
+    const allowedFace = ['round', 'oval', 'square', 'heart', 'diamond', 'long'];
+    const allowedHair = ['straight', 'wavy', 'curly', 'coily'];
+
+    const pick = (val, allowed, fallback) => (allowed.includes(val) ? val : fallback);
+
+    const gender = pick(String(analysis.gender || '').toLowerCase(), allowedGender, 'male');
+    const ageGroup = pick(String(analysis.ageGroup || '').toLowerCase(), allowedAge, gender === 'female' ? 'adult-female' : 'adult-male');
+    const faceShape = pick(String(analysis.faceShape || '').toLowerCase(), allowedFace, 'oval');
+    const hairType = pick(String(analysis.hairType || '').toLowerCase(), allowedHair, 'straight');
+
+    // Get hairstyle recommendations from database using haircutEngine
     let recommendedStyles = [];
     try {
-      recommendedStyles = await recommendHairstyles(userProfile, 6);
+      const recommendations = await recommend({
+        gender,
+        ageGroup,
+        faceShape,
+        hairType, // STRICT: include hairType filtering
+        ethnicity: analysis.ethnicity || 'unknown',
+        min: 6,
+        max: 10
+      });
+      
+      // FINAL STRICT FILTER (belt-and-suspenders):
+      // Ensure exact match on gender, ageGroup, faceShape, hairType before mapping
+      const strictlyFiltered = recommendations.filter(style => {
+        const hairTypes = Array.isArray(style.hairTypes) ? style.hairTypes : (style.hairType ? [style.hairType] : []);
+        return (
+          style.gender === gender &&
+          Array.isArray(style.ageGroups) && style.ageGroups.includes(ageGroup) &&
+          Array.isArray(style.faceShapes) && style.faceShapes.includes(faceShape) &&
+          (hairType === 'unknown' || hairTypes.includes(hairType))
+        );
+      });
+
+      // Format recommendations to match expected structure
+      recommendedStyles = strictlyFiltered.map(style => ({
+        name: style.name,
+        image: style.image,
+        hairLength: style.hairLength,
+        hairType: style.hairType,
+        description: style.description,
+        why_it_matches: [
+          `Perfect for ${faceShape} face shapes`,
+          `Suitable for ${gender} ${ageGroup}`,
+          style.description
+        ].filter(Boolean)
+      }));
+
+      // LIMIT TO TOP 5 SUGGESTIONS
+      if (recommendedStyles.length > 5) {
+        recommendedStyles = recommendedStyles.slice(0, 5);
+      }
     } catch (dbError) {
-      console.warn('Database not available or empty, using fallback:', dbError.message);
-      // Fallback: return empty recommendations with message
+      console.warn('Database error:', dbError.message);
       recommendedStyles = [];
     }
 
     // Return in the required format
     return res.json({
       userProfile: {
-        ageGroup: userProfile.ageGroup,
-        gender: userProfile.gender,
-        faceShape: userProfile.faceShape,
-        ethnicity: userProfile.ethnicity,
-        jawShape: userProfile.jawShape,
-        foreheadSize: userProfile.foreheadSize,
-        hairlineShape: userProfile.hairlineShape,
-        currentHairLength: userProfile.currentHairLength,
-        hairType: userProfile.hairType,
-        hairDensity: userProfile.hairDensity,
-        skinTone: userProfile.skinTone,
-        faceProportions: userProfile.faceProportions,
+        ageGroup,
+        gender,
+        faceShape,
+        ethnicity: analysis.ethnicity,
+        jawShape: analysis.jawShape,
+        foreheadSize: analysis.foreheadSize,
+        hairlineShape: analysis.hairlineShape,
+        currentHairLength: analysis.currentHairLength,
+        hairType,
+        hairDensity: analysis.hairDensity,
+        skinTone: analysis.skinTone,
+        faceProportions: analysis.faceProportions,
       },
       recommendedStyles: recommendedStyles.map(style => ({
         name: style.name,
@@ -103,11 +248,13 @@ router.post('/', upload.single('photo'), async (req, res) => {
         hairType: style.hairType,
         description: style.description,
       })),
+      // Frontend expects `suggestions` for display
+      suggestions: recommendedStyles,
       // Legacy fields for backward compatibility with frontend
-      faceShape: userProfile.faceShape,
-      gender: userProfile.gender,
-      ageGroup: userProfile.ageGroup,
-      ethnicity: userProfile.ethnicity,
+      faceShape,
+      gender,
+      ageGroup,
+      ethnicity: analysis.ethnicity,
       confidence: 0.95,
     });
   } catch (err) {

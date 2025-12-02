@@ -1,10 +1,33 @@
+// Inject token from URL into localStorage on load
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const rawToken = params.get("token");
+
+  if (rawToken) {
+    const decodedToken = decodeURIComponent(rawToken);
+    localStorage.setItem("authToken", decodedToken);
+
+    params.delete("token");
+    const clean =
+      window.location.pathname +
+      (params.toString() ? "?" + params.toString() : "");
+    window.history.replaceState({}, "", clean);
+  }
+})();
+
+// DOM Elements
 const form = document.getElementById('upload-form');
+const statusContainer = document.getElementById('status-container');
 const statusMessage = document.getElementById('status-message');
+const loadingState = document.getElementById('loading-state');
 const resultsPanel = document.getElementById('results');
 const shapeEl = document.getElementById('face-shape');
 const confidenceEl = document.getElementById('confidence');
 const suggestionsEl = document.getElementById('suggestions');
+const noSuggestionsEl = document.getElementById('no-suggestions');
 const analyzeBtn = document.getElementById('analyze-btn');
+const btnText = document.getElementById('btn-text');
+const btnLoader = document.getElementById('btn-loader');
 const previewImg = document.getElementById('preview');
 const previewWrap = document.getElementById('preview-wrap');
 const resultsPreview = document.getElementById('results-preview');
@@ -22,15 +45,27 @@ const mRowCheek = document.getElementById('m-row-cheek');
 const mRowJaw = document.getElementById('m-row-jaw');
 const mRowLength = document.getElementById('m-row-length');
 const measurementsWrap = document.getElementById('measurements');
-const confidenceRow = confidenceEl.parentElement;
+const confidenceRow = document.getElementById('confidence-row');
+const ageRow = document.getElementById('age-row');
 
 const BACKEND_URL = 'http://localhost:3000/analyze';
 let UPLOAD_CONSTRAINTS = null;
 
+// Global token check
+(function(){
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    console.warn('No token found — user is not logged in');
+  }
+})();
+
 // Fetch constraints from backend on load
 async function fetchConstraints() {
   try {
-    const r = await fetch('http://localhost:3000/api/constraints');
+    const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+    const r = await fetch('http://localhost:3000/api/constraints', {
+      headers: token ? { Authorization: 'Bearer ' + token } : undefined
+    });
     if (r.ok) UPLOAD_CONSTRAINTS = await r.json();
   } catch (e) {
     UPLOAD_CONSTRAINTS = null;
@@ -41,13 +76,68 @@ fetchConstraints();
 // Initialize: disable analyze button by default (no file selected yet)
 analyzeBtn.disabled = true;
 
+// UI Helper Functions
+function showStatus(message, type = 'info') {
+  const container = document.getElementById('status-container');
+  const messageEl = document.getElementById('status-message');
+  
+  if (!container || !messageEl) return;
+  
+  messageEl.textContent = message;
+  messageEl.className = type === 'error' ? 'alert-message error' : 'alert-message success';
+  container.hidden = false;
+  
+  // Auto-hide success/info messages after 5 seconds
+  if (type !== 'error') {
+    setTimeout(() => {
+      container.hidden = true;
+    }, 5000);
+  }
+}
+
+function hideStatus() {
+  const container = document.getElementById('status-container');
+  if (container) container.hidden = true;
+}
+
+function showLoading() {
+  const loadingState = document.getElementById('loading-state');
+  const results = document.getElementById('results');
+  if (loadingState) loadingState.hidden = false;
+  if (results) results.hidden = true;
+  hideStatus();
+}
+
+function hideLoading() {
+  const loadingState = document.getElementById('loading-state');
+  if (loadingState) loadingState.hidden = true;
+}
+
+function setButtonLoading(loading) {
+  const btn = document.getElementById('analyze-btn');
+  const btnText = document.getElementById('btn-text');
+  const btnLoader = document.getElementById('btn-loader');
+  
+  if (!btn || !btnText || !btnLoader) return;
+  
+  btn.disabled = loading;
+  if (loading) {
+    btnText.textContent = 'Analyzing...';
+    btnLoader.hidden = false;
+  } else {
+    btnText.textContent = '✨ Analyze My Face Now';
+    btnLoader.hidden = true;
+  }
+}
+
 // Preview selected image immediately
 const fileInput = document.getElementById('photo');
-let currentFileValid = true; // whether the selected file passes initial type/size checks
+let currentFileValid = true;
+
 fileInput.addEventListener('change', async () => {
   const file = fileInput.files && fileInput.files[0];
   currentFileValid = true;
-  statusMessage.textContent = '';
+  hideStatus();
   
   // Clear previous results when new file is selected
   resultsPanel.hidden = true;
@@ -62,13 +152,13 @@ fileInput.addEventListener('change', async () => {
   // Validate basic constraints (type and file size)
   if (UPLOAD_CONSTRAINTS) {
     if (UPLOAD_CONSTRAINTS.allowedTypes && !UPLOAD_CONSTRAINTS.allowedTypes.includes(file.type)) {
-      statusMessage.textContent = 'Unsupported file type. Please upload JPG or PNG.';
+      showStatus('⚠️ Unsupported file type. Please upload JPG or PNG.', 'error');
       currentFileValid = false;
       analyzeBtn.disabled = true;
       return;
     }
     if (UPLOAD_CONSTRAINTS.maxFileSize && file.size > UPLOAD_CONSTRAINTS.maxFileSize) {
-      statusMessage.textContent = `File too large. Max ${(UPLOAD_CONSTRAINTS.maxFileSize/1024/1024).toFixed(1)} MB allowed.`;
+      showStatus(`⚠️ File too large. Max ${(UPLOAD_CONSTRAINTS.maxFileSize/1024/1024).toFixed(1)} MB allowed.`, 'error');
       currentFileValid = false;
       analyzeBtn.disabled = true;
       return;
@@ -84,7 +174,7 @@ fileInput.addEventListener('change', async () => {
   }).catch(() => null);
   
   if (!dataUrl) {
-    statusMessage.textContent = 'Failed to read image file.';
+    showStatus('⚠️ Failed to read image file.', 'error');
     currentFileValid = false;
     analyzeBtn.disabled = true;
     return;
@@ -98,7 +188,7 @@ fileInput.addEventListener('change', async () => {
   }).catch(() => null);
   
   if (!img) {
-    statusMessage.textContent = 'Failed to load image. Please try another file.';
+    showStatus('⚠️ Failed to load image. Please try another file.', 'error');
     currentFileValid = false;
     analyzeBtn.disabled = true;
     return;
@@ -107,25 +197,25 @@ fileInput.addEventListener('change', async () => {
   // Validate dimensions
   if (UPLOAD_CONSTRAINTS) {
     if (UPLOAD_CONSTRAINTS.maxWidth && img.width > UPLOAD_CONSTRAINTS.maxWidth) {
-      statusMessage.textContent = `Image width too large (max ${UPLOAD_CONSTRAINTS.maxWidth}px). Please choose another image.`;
+      showStatus(`⚠️ Image width too large (max ${UPLOAD_CONSTRAINTS.maxWidth}px). Please choose another image.`, 'error');
       currentFileValid = false;
       analyzeBtn.disabled = true;
       return;
     }
     if (UPLOAD_CONSTRAINTS.maxHeight && img.height > UPLOAD_CONSTRAINTS.maxHeight) {
-      statusMessage.textContent = `Image height too large (max ${UPLOAD_CONSTRAINTS.maxHeight}px). Please choose another image.`;
+      showStatus(`⚠️ Image height too large (max ${UPLOAD_CONSTRAINTS.maxHeight}px). Please choose another image.`, 'error');
       currentFileValid = false;
       analyzeBtn.disabled = true;
       return;
     }
     if (UPLOAD_CONSTRAINTS.minWidth && img.width < UPLOAD_CONSTRAINTS.minWidth) {
-      statusMessage.textContent = `Image width too small (min ${UPLOAD_CONSTRAINTS.minWidth}px). Please choose another image.`;
+      showStatus(`⚠️ Image width too small (min ${UPLOAD_CONSTRAINTS.minWidth}px). Please choose another image.`, 'error');
       currentFileValid = false;
       analyzeBtn.disabled = true;
       return;
     }
     if (UPLOAD_CONSTRAINTS.minHeight && img.height < UPLOAD_CONSTRAINTS.minHeight) {
-      statusMessage.textContent = `Image height too small (min ${UPLOAD_CONSTRAINTS.minHeight}px). Please choose another image.`;
+      showStatus(`⚠️ Image height too small (min ${UPLOAD_CONSTRAINTS.minHeight}px). Please choose another image.`, 'error');
       currentFileValid = false;
       analyzeBtn.disabled = true;
       return;
@@ -137,146 +227,257 @@ fileInput.addEventListener('change', async () => {
   previewWrap.hidden = false;
   currentFileValid = true;
   analyzeBtn.disabled = false;
-  statusMessage.textContent = '';
+  hideStatus();
 });
 
-// Ensure clicking the file input resets previous selection and results so user starts fresh
+// Ensure clicking the file input resets previous selection and results
 fileInput.addEventListener('click', () => {
-  // Clear value so selecting same file again triggers change
   fileInput.value = '';
   previewWrap.hidden = true;
   previewImg.src = '';
   resultsPanel.hidden = true;
-  statusMessage.textContent = '';
+  hideStatus();
 });
 
+// Form submission
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   
   // Validation already done in fileInput change handler
   if (!currentFileValid || !fileInput.files.length) {
-    statusMessage.textContent = 'Please fix the image issues and select a valid photo.';
+    showStatus('⚠️ Please fix the image issues and select a valid photo.', 'error');
     return;
   }
 
   const formData = new FormData();
   formData.append('photo', fileInput.files[0]);
 
-  setLoading(true);
-  statusMessage.textContent = 'Analyzing photo...';
+  setButtonLoading(true);
+  showLoading();
 
   try {
+    const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+    const headers = {
+      Authorization: 'Bearer ' + token
+    };
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
+      headers,
       body: formData,
     });
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
       const message = [errorBody.error, errorBody.detail || errorBody.details].filter(Boolean).join(': ');
-      throw new Error(message || 'Analysis failed.');
+      
+      // Format error messages for better UX
+      let formattedError = message || 'Analysis failed.';
+      if (formattedError.includes('No face detected')) {
+        formattedError = '⚠️ No face detected\nPlease upload a clear photo with a human face.';
+      } else if (formattedError.includes('Multiple faces')) {
+        formattedError = '⚠️ Multiple faces detected\nPlease upload a photo with only one face.';
+      } else if (formattedError.includes('too low') || formattedError.includes('blurry')) {
+        formattedError = '⚠️ Image quality is too low\nPlease upload a clear, high-quality face photo.';
+      } else if (formattedError.includes('daily limit') || formattedError.includes('attempts')) {
+        formattedError = '⚠️ Daily limit reached\nYou have used all your daily scans. Please try again tomorrow.';
+      } else if (formattedError.includes('token') || formattedError.includes('auth')) {
+        formattedError = '⚠️ Authentication error\nPlease log in again.';
+      } else {
+        formattedError = '⚠️ ' + formattedError;
+      }
+      
+      throw new Error(formattedError);
     }
 
     const data = await response.json();
+    console.log('📊 Analysis data received:', data);
+    hideLoading();
     renderResults(data);
-    statusMessage.textContent = 'Done! Scroll to see your recommendation.';
+    
+    // Smooth scroll to results
+    setTimeout(() => {
+      const resultsSection = document.getElementById('results');
+      if (resultsSection && !resultsSection.hidden) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 200);
+    
   } catch (error) {
-    console.error(error);
-    statusMessage.textContent = error.message || 'Something went wrong.';
-    resultsPanel.hidden = true;
+    console.error('❌ Analysis error:', error);
+    hideLoading();
+    showStatus(error.message || '⚠️ Something went wrong. Please try again.', 'error');
+    const resultsSection = document.getElementById('results');
+    if (resultsSection) resultsSection.hidden = true;
   } finally {
-    setLoading(false);
+    setButtonLoading(false);
   }
 });
 
 function renderResults({ faceShape, confidence, suggestions, measurements, raw, gender, age, ageGroup }) {
-  shapeEl.textContent = faceShape ?? 'unknown';
-  genderEl.textContent = gender ?? 'unknown';
-  ageEl.textContent = (typeof age === 'number') ? String(age) : 'unknown';
-  ageGroupEl.textContent = ageGroup ?? 'unknown';
-  confidenceEl.textContent = typeof confidence === 'number' ? `${(confidence * 100).toFixed(1)}%` : 'n/a';
+  console.log('🎨 Rendering results...', { faceShape, gender, age, ageGroup, confidence, suggestionsCount: suggestions?.length });
+  
+  // Get all elements
+  const resultsPanel = document.getElementById('results');
+  const shapeEl = document.getElementById('face-shape');
+  const genderEl = document.getElementById('gender');
+  const ageEl = document.getElementById('age');
+  const ageRow = document.getElementById('age-row');
+  const ageGroupEl = document.getElementById('age-group');
+  const confidenceEl = document.getElementById('confidence');
+  const confidenceRow = document.getElementById('confidence-row');
+  const resultsPreview = document.getElementById('results-preview');
+  const previewImg = document.getElementById('preview');
+  const suggestionsEl = document.getElementById('suggestions');
+  const noSuggestionsEl = document.getElementById('no-suggestions');
+  const measurementsWrap = document.getElementById('measurements');
+  const mForehead = document.getElementById('m-forehead');
+  const mCheek = document.getElementById('m-cheek');
+  const mJaw = document.getElementById('m-jaw');
+  const mLength = document.getElementById('m-length');
+  const mRowForehead = document.getElementById('m-row-forehead');
+  const mRowCheek = document.getElementById('m-row-cheek');
+  const mRowJaw = document.getElementById('m-row-jaw');
+  const mRowLength = document.getElementById('m-row-length');
+  
+  if (!resultsPanel) {
+    console.error('❌ Results panel not found!');
+    return;
+  }
+  
+  // Set basic attributes
+  if (shapeEl) shapeEl.textContent = faceShape ?? 'Unknown';
+  if (genderEl) genderEl.textContent = gender ?? 'Unknown';
+  
+  if (typeof age === 'number' && ageEl && ageRow) {
+    ageRow.hidden = false;
+    ageEl.textContent = String(age);
+  } else if (ageRow) {
+    ageRow.hidden = true;
+  }
+  
+  if (ageGroupEl) ageGroupEl.textContent = ageGroup ?? 'Unknown';
+  
+  if (typeof confidence === 'number' && confidenceEl && confidenceRow) {
+    confidenceRow.hidden = false;
+    confidenceEl.textContent = `${(confidence * 100).toFixed(1)}%`;
+  } else if (confidenceRow) {
+    confidenceRow.hidden = true;
+  }
 
   // Measurements
-  mForehead.textContent = measurements?.foreheadWidth ? `${measurements.foreheadWidth}px` : 'n/a';
-  mCheek.textContent = measurements?.cheekboneWidth ? `${measurements.cheekboneWidth}px` : 'n/a';
-  mJaw.textContent = measurements?.jawWidth ? `${measurements.jawWidth}px` : 'n/a';
-  mLength.textContent = measurements?.faceLength ? `${measurements.faceLength}px` : 'n/a';
+  if (measurements?.foreheadWidth && mForehead && mRowForehead) {
+    mRowForehead.hidden = false;
+    mForehead.textContent = `${measurements.foreheadWidth}px`;
+  } else if (mRowForehead) {
+    mRowForehead.hidden = true;
+  }
+  
+  if (measurements?.cheekboneWidth && mCheek && mRowCheek) {
+    mRowCheek.hidden = false;
+    mCheek.textContent = `${measurements.cheekboneWidth}px`;
+  } else if (mRowCheek) {
+    mRowCheek.hidden = true;
+  }
+  
+  if (measurements?.jawWidth && mJaw && mRowJaw) {
+    mRowJaw.hidden = false;
+    mJaw.textContent = `${measurements.jawWidth}px`;
+  } else if (mRowJaw) {
+    mRowJaw.hidden = true;
+  }
+  
+  if (measurements?.faceLength && mLength && mRowLength) {
+    mRowLength.hidden = false;
+    mLength.textContent = `${measurements.faceLength}px`;
+  } else if (mRowLength) {
+    mRowLength.hidden = true;
+  }
 
-  // Preview returned raw image if available (we'll reuse the selected preview)
-  resultsPreview.src = previewImg.src || '';
+  // Hide the whole measurements block if everything is missing
+  const anyMeasurementVisible = measurements && (measurements.foreheadWidth || measurements.cheekboneWidth || measurements.jawWidth || measurements.faceLength);
+  if (measurementsWrap) measurementsWrap.hidden = !anyMeasurementVisible;
 
-  suggestionsEl.innerHTML = '';
-    if (Array.isArray(suggestions) && suggestions.length) {
-    suggestions.forEach((s) => {
+  // Preview returned image
+  if (resultsPreview && previewImg) {
+    resultsPreview.src = previewImg.src || '';
+  }
+
+  // Render suggestions
+  if (suggestionsEl) {
+    suggestionsEl.innerHTML = '';
+    console.log('🎯 Rendering suggestions:', suggestions?.length || 0);
+  }
+  
+  if (Array.isArray(suggestions) && suggestions.length && suggestionsEl) {
+    if (noSuggestionsEl) noSuggestionsEl.hidden = true;
+    
+    suggestions.forEach((s, idx) => {
+      console.log(`  ✂️ Suggestion ${idx + 1}:`, s.name || s);
       const card = document.createElement('div');
       card.className = 'suggestion-card';
-      const img = document.createElement('img');
-      // Use provided example image; fallback to inline SVG if loading fails
-      const FALLBACK_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="Segoe UI, Arial" font-size="20">Example</text></svg>');
+      
       const name = typeof s === 'string' ? s : (s.name || 'Suggestion');
       const example = typeof s === 'string' ? null : (s.image || null);
+      const description = typeof s === 'object' ? (s.description || '') : '';
+      const whyMatches = typeof s === 'object' && Array.isArray(s.why_it_matches) ? s.why_it_matches : [];
+      
+      // Create image
+      const img = document.createElement('img');
+      const FALLBACK_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="320"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="Inter, Arial" font-size="18" font-weight="600">Hair Style</text></svg>');
+      img.className = 'suggestion-image';
       img.src = example || FALLBACK_SVG;
       img.alt = name;
       img.onerror = () => {
         img.onerror = null;
         img.src = FALLBACK_SVG;
       };
+      
+      // Create content container
+      const content = document.createElement('div');
+      content.className = 'suggestion-content';
+      
+      // Create title
       const title = document.createElement('div');
-      title.className = 'suggestion-title';
+      title.className = 'suggestion-name';
       title.textContent = name;
+      
+      content.appendChild(title);
+      
+      // Add description if available
+      if (description) {
+        const desc = document.createElement('div');
+        desc.className = 'suggestion-description';
+        desc.textContent = description;
+        content.appendChild(desc);
+      }
+      
+      // Add "why it matches" if available
+      if (whyMatches.length > 0) {
+        const whyDiv = document.createElement('div');
+        whyDiv.className = 'suggestion-tags';
+        whyMatches.forEach(reason => {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = reason;
+          whyDiv.appendChild(tag);
+        });
+        content.appendChild(whyDiv);
+      }
+      
       card.appendChild(img);
-      card.appendChild(title);
+      card.appendChild(content);
       suggestionsEl.appendChild(card);
     });
-  } else {
-    const li = document.createElement('div');
-    li.textContent = 'No suggestions available.';
-    suggestionsEl.appendChild(li);
+  } else if (noSuggestionsEl) {
+    console.log('⚠️ No suggestions to display');
+    noSuggestionsEl.hidden = false;
   }
 
-  // Hide measurement rows where data is missing
-  if (measurements?.foreheadWidth) {
-    mRowForehead.style.display = '';
-    mForehead.textContent = `${measurements.foreheadWidth}px`;
-  } else {
-    mRowForehead.style.display = 'none';
+  // Show results panel
+  console.log('✅ Showing results panel');
+  if (resultsPanel) {
+    resultsPanel.hidden = false;
+    console.log('✅ Results panel is now visible');
   }
-  if (measurements?.cheekboneWidth) {
-    mRowCheek.style.display = '';
-    mCheek.textContent = `${measurements.cheekboneWidth}px`;
-  } else {
-    mRowCheek.style.display = 'none';
-  }
-  if (measurements?.jawWidth) {
-    mRowJaw.style.display = '';
-    mJaw.textContent = `${measurements.jawWidth}px`;
-  } else {
-    mRowJaw.style.display = 'none';
-  }
-  if (measurements?.faceLength) {
-    mRowLength.style.display = '';
-    mLength.textContent = `${measurements.faceLength}px`;
-  } else {
-    mRowLength.style.display = 'none';
-  }
-
-  // Hide the whole measurements block if everything is missing
-  const anyMeasurementVisible = [mRowForehead, mRowCheek, mRowJaw, mRowLength].some(r => r.style.display !== 'none');
-  measurementsWrap.style.display = anyMeasurementVisible ? '' : 'none';
-
-  // Confidence row: hide if no numeric confidence
-  if (typeof confidence === 'number') {
-    confidenceRow.style.display = '';
-    confidenceEl.textContent = `${(confidence * 100).toFixed(1)}%`;
-  } else {
-    confidenceRow.style.display = 'none';
-  }
-
-  resultsPanel.hidden = false;
-}
-
-function setLoading(isLoading) {
-  analyzeBtn.disabled = isLoading;
-  analyzeBtn.textContent = isLoading ? 'Analyzing...' : 'Analyze';
 }
 

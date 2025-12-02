@@ -32,8 +32,4 @@ COMMON MISTAKES:
 ❌ OPENAI_API_KEY="sk-proj-..."  (has quotes)
 ❌ OPENAI_API_KEY=sk-proj-abc    (key is incomplete/cut off)
 
-═══════════════════════════════════════════════════════════════
-
-For detailed instructions, see: PROJECT_KEY_SETUP.md
-
-
+═══════════════════════════════════════════════

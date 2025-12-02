@@ -1,0 +1,61 @@
+[
+  {
+    "id": "1764701707799-fajl2g",
+    "email": "nemithaprs@gmail.com",
+    "hashedPassword": "$2b$10$SN36kSoV5jVP3EhJ1Th60.BlTfijaLYn7CywZAV4/oD1P0O71jLlu",
+    "freeDailyScans": "Infinity",
+    "attemptsToday": "Infinity",
+    "lastScanDate": "2025-12-03",
+    "failedLoginAttempts": 4,
+    "lockUntil": null,
+    "unlimited": true
+  },
+  {
+    "id": "1764703554479-g72jqh",
+    "email": "nemithaprabashwara30@gmail.com",
+    "hashedPassword": "",
+    "freeDailyScans": 0,
+    "attemptsToday": 0,
+    "lastScanDate": "2025-12-02",
+    "failedLoginAttempts": 0,
+    "lockUntil": null,
+    "googleId": "105385095127333788618",
+    "isGoogleUser": true
+  },
+  {
+    "id": "1764703708765-jhirok",
+    "email": "prabashwaranemitha19@gmail.com",
+    "hashedPassword": "",
+    "freeDailyScans": 3,
+    "attemptsToday": 3,
+    "lastScanDate": "2025-12-03",
+    "failedLoginAttempts": 0,
+    "lockUntil": null,
+    "googleId": "116517681595965742668",
+    "isGoogleUser": true
+  },
+  {
+    "id": "1764703734887-9fbbgz",
+    "email": "anothu@gmail.com",
+    "hashedPassword": "",
+    "freeDailyScans": 0,
+    "attemptsToday": 0,
+    "lastScanDate": "2025-12-02",
+    "failedLoginAttempts": 1,
+    "lockUntil": null,
+    "googleId": "102706516468005050001",
+    "isGoogleUser": true
+  },
+  {
+    "id": "1764704526064-agpfjc",
+    "email": "nemitha.20250521@iit.ac.lk",
+    "hashedPassword": "",
+    "freeDailyScans": 3,
+    "attemptsToday": 3,
+    "lastScanDate": "2025-12-03",
+    "failedLoginAttempts": 0,
+    "lockUntil": null,
+    "googleId": "100905585888337810446",
+    "isGoogleUser": true
+  }
+]

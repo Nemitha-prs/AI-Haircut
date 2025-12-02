@@ -8,74 +8,56 @@ let cached = null;
 
 async function loadDataset() {
   if (cached) return cached;
-  // Prefer a single combined file if present
-  const combinedPath = path.join(haircutsDir, 'haircuts.json');
+  // Load the single unified database
+  const dbPath = path.join(haircutsDir, 'hairstyleDatabase.json');
   try {
-    const raw = await fs.readFile(combinedPath, 'utf8');
+    const raw = await fs.readFile(dbPath, 'utf8');
     const arr = JSON.parse(raw);
     cached = arr.map(normalizeEntry);
     return cached;
   } catch (e) {
-    // Fall back to merging existing split files
-  }
-
-  // Read all files in haircuts dir
-  let files = [];
-  try {
-    files = await fs.readdir(haircutsDir);
-  } catch (e) {
+    console.error('Failed to load hairstyleDatabase.json:', e);
     return [];
   }
-
-  const mapping = {
-    'adult_female.json': { gender: 'female', ageGroup: 'adult-female' },
-    'adult_male.json': { gender: 'male', ageGroup: 'adult-male' },
-    'child_boy.json': { gender: 'male', ageGroup: 'child-boy' },
-    'child_girl.json': { gender: 'female', ageGroup: 'child-girl' },
-    'teen_female.json': { gender: 'female', ageGroup: 'teen-girl' },
-    'teen_male.json': { gender: 'male', ageGroup: 'teen-boy' },
-  };
-
-  let out = [];
-  for (const f of files) {
-    if (!f.toLowerCase().endsWith('.json')) continue;
-    const full = path.join(haircutsDir, f);
-    let raw = '';
-    try {
-      raw = await fs.readFile(full, 'utf8');
-    } catch (e) {
-      continue;
-    }
-    let arr = [];
-    try {
-      arr = JSON.parse(raw);
-    } catch (e) {
-      continue;
-    }
-    const meta = mapping[f] || {};
-    for (const e of arr) {
-      const entry = Object.assign({}, e);
-      // Normalize fields
-      if (!entry.faceShapes && entry.shape) entry.faceShapes = entry.shape;
-      if (!entry.ageGroups) entry.ageGroups = meta.ageGroup ? [meta.ageGroup] : entry.ageGroups || [];
-      if (!entry.gender) entry.gender = meta.gender || entry.gender || (entry.ageGroups && entry.ageGroups.find(a => a.includes('male')) ? 'male' : 'female');
-      // Keep description/image/name
-      out.push(normalizeEntry(entry));
-    }
-  }
-  cached = out;
-  return cached;
 }
 
 function normalizeEntry(e) {
+  // Infer ageGroups from gender and tags
+  let ageGroups = [];
+  const g = (e.gender || '').toLowerCase();
+  const tags = Array.isArray(e.tags) ? e.tags.map(t => t.toLowerCase()) : [];
+  
+  // Determine gender first
+  let normalizedGender = 'unknown';
+  if (g === 'female' || g.includes('girl') || g.includes('woman')) {
+    normalizedGender = 'female';
+  } else if (g === 'male' || g.includes('boy') || g.includes('man')) {
+    normalizedGender = 'male';
+  }
+  
+  // Then determine age groups
+  if (g.includes('teen') || tags.includes('teen') || tags.includes('teenage')) {
+    ageGroups = normalizedGender === 'male' ? ['teen-boy'] : ['teen-girl'];
+  } else if (g.includes('child') || g.includes('kid') || tags.includes('child') || tags.includes('kids')) {
+    ageGroups = normalizedGender === 'male' ? ['child-boy'] : ['child-girl'];
+  } else if (normalizedGender === 'male') {
+    // Default male styles work for both adults and teens
+    ageGroups = ['adult-male', 'teen-boy'];
+  } else if (normalizedGender === 'female') {
+    // Default female styles work for both adults and teens
+    ageGroups = ['adult-female', 'teen-girl'];
+  } else {
+    ageGroups = ['adult-male', 'adult-female'];
+  }
+
   return {
     name: e.name || e.title || 'Unnamed',
-    gender: (e.gender || 'unknown').toLowerCase(),
-    ageGroups: Array.isArray(e.ageGroups) ? e.ageGroups : (e.ageGroups ? [e.ageGroups] : []),
+    gender: normalizedGender,
+    ageGroups: ageGroups,
     faceShapes: Array.isArray(e.faceShapes) ? e.faceShapes : (e.faceShapes ? [e.faceShapes] : (e.shape ? (Array.isArray(e.shape) ? e.shape : [e.shape]) : [])),
     ethnicity: Array.isArray(e.ethnicity) ? e.ethnicity : (e.ethnicity ? [e.ethnicity] : ['all']),
     hairLength: e.hairLength || e.length || 'medium',
-    hairType: e.hairType || e.type || 'straight',
+    hairType: e.hairType || e.hairTypes?.[0] || e.type || 'straight',
     description: e.description || '',
     image: e.image || e.photo || '',
     raw: e,
@@ -121,87 +103,77 @@ function shuffleArray(arr) {
 }
 
 /**
- * Recommend hairstyles.
- * options: { min:6, max:10, gender, ageGroup, faceShape, ethnicity }
+ * Recommend hairstyles with STRICT filtering.
+ * SYSTEM INSTRUCTIONS:
+ * 1. Gender must match exactly
+ * 2. Age group must match exactly
+ * 3. Face shape filtering is MANDATORY
+ * 4. Hair type filtering is MANDATORY
+ * 5. NO fallbacks that dilute filtering
+ * 
+ * options: { gender, ageGroup, faceShape, hairType, ethnicity, min, max }
  */
-export async function recommend({ gender, ageGroup, faceShape, ethnicity, min = 6, max = 10 } = {}) {
+export async function recommend({ gender, ageGroup, faceShape, hairType, ethnicity, min = 6, max = 10 } = {}) {
   const dataset = await loadDataset();
   if (!dataset || dataset.length === 0) return [];
 
-  // 1. Filter by gender
-  let candidates = dataset.filter(e => e.gender === (gender || e.gender));
+  // STRICT FILTERING - NO EXCEPTIONS
+  let matches = dataset.filter(entry => {
+    // 1. Gender must match exactly
+    if (entry.gender !== gender) return false;
 
-  // 2. Filter by ageGroup
-  candidates = candidates.filter(e => Array.isArray(e.ageGroups) && e.ageGroups.includes(ageGroup));
+    // 2. Age group must match exactly
+    if (!Array.isArray(entry.ageGroups) || !entry.ageGroups.includes(ageGroup)) return false;
 
-  // 3. Filter by ethnicity (if specified and not unknown)
-  if (ethnicity && ethnicity !== 'unknown') {
-    candidates = candidates.filter(e => 
-      Array.isArray(e.ethnicity) && 
-      (e.ethnicity.includes('all') || e.ethnicity.includes(ethnicity))
-    );
-  }
+    // 3. Face shape must match (MANDATORY)
+    if (!Array.isArray(entry.faceShapes) || !entry.faceShapes.includes(faceShape)) return false;
 
-  // 4. Filter by faceShape: prefer exact matches, but if too few, include non-matching
-  let faceMatches = candidates.filter(e => Array.isArray(e.faceShapes) && e.faceShapes.includes(faceShape));
-  let nonFaceMatches = candidates.filter(e => !(Array.isArray(e.faceShapes) && e.faceShapes.includes(faceShape)));
+    // 4. Hair type must match (MANDATORY) - if provided and not unknown
+    if (hairType && hairType !== 'unknown') {
+      const entryHairTypes = Array.isArray(entry.hairTypes) ? entry.hairTypes : 
+                            (entry.hairType ? [entry.hairType] : []);
+      if (entryHairTypes.length > 0 && !entryHairTypes.includes(hairType)) return false;
+    }
 
-  // If not enough faceMatches to satisfy max, keep some nonFaceMatches to increase diversity
-  const wantCount = Math.max(min, Math.min(max, Math.floor(Math.random() * (max - min + 1)) + min));
+    // 5. Ethnicity filter (optional - 'all' is universal)
+    if (ethnicity && ethnicity !== 'unknown') {
+      if (!Array.isArray(entry.ethnicity) || 
+          (!entry.ethnicity.includes('all') && !entry.ethnicity.includes(ethnicity))) {
+        return false;
+      }
+    }
 
-  let pool = [];
-  if (faceMatches.length >= wantCount) {
-    pool = faceMatches;
-  } else {
-    // include all faceMatches and some of nonFaceMatches (shuffled)
-    pool = faceMatches.slice();
-    shuffleArray(nonFaceMatches);
-    pool = pool.concat(nonFaceMatches.slice(0, Math.max(0, wantCount - pool.length)));
-  }
-
-  // Score each in pool
-  const scored = pool.map(e => {
-    const base = scoreEntry(e, { gender, ageGroup, faceShape, ethnicity });
-    // slight random jitter so results vary
-    const jitter = (Math.random() - 0.5) * 0.6; // +/-0.3
-    return { entry: e, score: base + jitter };
+    return true;
   });
 
-  // Sort by score desc
+  // If no matches, return empty array (NO FALLBACKS)
+  if (matches.length === 0) return [];
+
+  // Score and sort matches
+  const scored = matches.map(entry => {
+    const base = scoreEntry(entry, { gender, ageGroup, faceShape, ethnicity });
+    const jitter = (Math.random() - 0.5) * 0.3; // Small variance for diversity
+    return { entry, score: base + jitter };
+  });
+
   scored.sort((a, b) => b.score - a.score);
 
-  // Ensure unique images and take top wantCount
+  // Return unique images only
   const unique = [];
   const seen = new Set();
+  const targetCount = Math.min(max, matches.length);
+
   for (const s of scored) {
     if (!s.entry.image) continue;
     if (seen.has(s.entry.image)) continue;
     seen.add(s.entry.image);
     unique.push(Object.assign({ score: Math.round(s.score * 100) / 100 }, s.entry));
-    if (unique.length >= wantCount) break;
+    if (unique.length >= targetCount) break;
   }
 
-  // If still not enough, fallback: broaden by dropping ageGroup filter
-  if (unique.length < min) {
-    // broaden candidates to same gender across ages
-    let broad = dataset.filter(e => e.gender === (gender || e.gender));
-    // Filter by ethnicity if specified
-    if (ethnicity && ethnicity !== 'unknown') {
-      broad = broad.filter(e => 
-        Array.isArray(e.ethnicity) && 
-        (e.ethnicity.includes('all') || e.ethnicity.includes(ethnicity))
-      );
-    }
-    // score broad
-    const scoredBroad = broad.map(e => ({ entry: e, score: scoreEntry(e, { gender, ageGroup, faceShape, ethnicity }) + (Math.random() - 0.5) * 0.4 }));
-    scoredBroad.sort((a, b) => b.score - a.score);
-    for (const s of scoredBroad) {
-      if (!s.entry.image) continue;
-      if (seen.has(s.entry.image)) continue;
-      seen.add(s.entry.image);
-      unique.push(Object.assign({ score: Math.round(s.score * 100) / 100 }, s.entry));
-      if (unique.length >= min) break;
-    }
+  // LIMIT TO TOP 5 SUGGESTIONS (final safeguard)
+  if (unique.length > 5) {
+    return unique.slice(0, 5);
   }
 
   return unique;

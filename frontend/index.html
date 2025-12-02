@@ -3,59 +3,206 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Haircut Recommender</title>
+    <title>✂️ AI HairFit - Personalized Hairstyle Recommendations</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
-    <main class="app-shell">
-      <section class="panel intro">
-        <h1>AI Haircut Recommender</h1>
-        <p>Upload a clear face photo to detect your face shape, age, gender, and get haircut ideas tailored to you.</p>
-      </section>
-      <section class="panel uploader">
-        <form id="upload-form">
-          <label class="upload-label" for="photo">Face photo</label>
-          <input type="file" id="photo" name="photo" accept="image/*" required />
-          <div class="preview-wrap" id="preview-wrap" hidden>
-            <img id="preview" alt="Selected photo preview" />
-          </div>
-          <button type="submit" id="analyze-btn">Analyze</button>
-        </form>
-        <p class="hint">No photo is stored—it's only used for generating a recommendation via the backend.</p>
-      </section>
+    <header class="header">
+      <div class="container header-content">
+        <div class="logo">✂️ AI HairFit</div>
+        <button id="logout-btn" type="button" class="logout-btn">Log Out</button>
+      </div>
+    </header>
 
-      <section class="panel results" id="results" hidden>
-        <h2>Results</h2>
-        <div class="result-grid">
-          <div class="result-left">
-            <div class="preview-box"><img id="results-preview" alt="Analysis preview" /></div>
-          </div>
-          <div class="result-right">
-            <div class="result-row"><span class="result-label">Detected face shape:</span> <span class="result-value" id="face-shape">-</span></div>
-            <div class="result-row"><span class="result-label">Gender:</span> <span class="result-value" id="gender">-</span></div>
-            <div class="result-row"><span class="result-label">Age:</span> <span class="result-value" id="age">-</span></div>
-            <div class="result-row"><span class="result-label">Age group:</span> <span class="result-value" id="age-group">-</span></div>
-            <div class="result-row"><span class="result-label">Confidence:</span> <span class="result-value" id="confidence">-</span></div>
-            <div id="measurements" class="measurements">
-              <h3>Measurements</h3>
-              <div class="result-row" id="m-row-forehead"><span class="result-label">Forehead:</span> <span id="m-forehead">-</span></div>
-              <div class="result-row" id="m-row-cheek"><span class="result-label">Cheekbone:</span> <span id="m-cheek">-</span></div>
-              <div class="result-row" id="m-row-jaw"><span class="result-label">Jaw:</span> <span id="m-jaw">-</span></div>
-              <div class="result-row" id="m-row-length"><span class="result-label">Face length:</span> <span id="m-length">-</span></div>
+    <main class="main-content">
+      <div class="container">
+        
+        <section class="landing-section">
+          <h1 class="landing-title">Find Your Perfect Look: Instant AI Hairstyle Recommendations.</h1>
+          <p class="landing-subtitle">Harness the power of AI to analyze your unique facial geometry and discover the haircut that perfectly complements you.</p>
+          <div class="features-list">
+            <div class="feature-item">
+              <span class="feature-icon">📐</span>
+              <span class="feature-text">Precise Face Shape Detection</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🌟</span>
+              <span class="feature-text">Curated, Trending Hairstyle Matches</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🚀</span>
+              <span class="feature-text">Blazing Fast Analysis in Seconds</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🔒</span>
+              <span class="feature-text">Your Data is Secure and Private</span>
             </div>
           </div>
-        </div>
-        <div class="panel suggestions-panel">
-          <h3>Suggested haircuts</h3>
-          <div id="suggestions" class="suggestions-grid"></div>
-        </div>
-      </section>
+        </section>
 
-      <section class="panel status">
-        <p id="status-message"></p>
-      </section>
+        <section class="upload-section">
+          <div class="section-header">
+            <span class="step-badge">Step 1</span>
+            <h2 class="section-title">Upload Your Photo for Analysis</h2>
+          </div>
+          
+          <div class="upload-card">
+            <form id="upload-form" class="upload-form">
+              <div class="form-group">
+                <label for="photo" class="form-label">Select Your Photo</label>
+                <input type="file" id="photo" name="photo" accept="image/*" required class="file-input" />
+              </div>
+              
+              <div class="preview-wrap" id="preview-wrap" hidden>
+                <img id="preview" alt="Selected photo preview" class="preview-image" />
+              </div>
+              
+              <button type="submit" id="analyze-btn" class="submit-btn" disabled>
+                <span id="btn-text">✨ Analyze My Face Now</span>
+                <span id="btn-loader" class="button-loader" hidden></span>
+              </button>
+            </form>
+            
+            <div class="upload-tips">
+              <p class="tips-title">💡 Tips for Best Results</p>
+              <ul class="tips-list">
+                <li>Use a clear, front-facing photo</li>
+                <li>Ensure good lighting on your face</li>
+                <li>Remove glasses or accessories</li>
+                <li>Only one face should be visible</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <div id="status-container" class="alert-container" hidden>
+          <div id="status-message" class="alert-message"></div>
+        </div>
+
+        <div id="loading-state" class="loading-container" hidden>
+          <div class="spinner"></div>
+          <p class="loading-text">Analyzing your unique facial geometry…</p>
+          <p class="loading-subtext">This may take a few seconds</p>
+        </div>
+
+        <section class="results-section" id="results" hidden>
+          <div class="results-header">
+            <h2 class="results-title">✨ Your Personalized Analysis</h2>
+            <p class="results-subtitle">Here's what we discovered about your unique features</p>
+          </div>
+
+          <div class="results-content">
+            <div class="results-grid">
+              <div class="result-image-container">
+                <img id="results-preview" alt="Analysis preview" class="result-image" />
+              </div>
+
+              <div class="result-attributes">
+                <div class="attribute-card">
+                  <div class="attribute-label">Face Shape</div>
+                  <div class="attribute-value" id="face-shape">-</div>
+                </div>
+                <div class="attribute-card">
+                  <div class="attribute-label">Gender</div>
+                  <div class="attribute-value" id="gender">-</div>
+                </div>
+                <div class="attribute-card" id="age-row">
+                  <div class="attribute-label">Age Estimate</div>
+                  <div class="attribute-value" id="age">-</div>
+                </div>
+                <div class="attribute-card">
+                  <div class="attribute-label">Age Group</div>
+                  <div class="attribute-value" id="age-group">-</div>
+                </div>
+                <div class="attribute-card" id="confidence-row">
+                  <div class="attribute-label">Confidence Score</div>
+                  <div class="attribute-value" id="confidence">-</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div id="measurements" class="measurements-section" hidden>
+            <h4 class="measurements-title">📏 Facial Measurements</h4>
+            <div class="measurements-grid">
+              <div class="measurement-card" id="m-row-forehead">
+                <div class="measurement-label">Forehead Width</div>
+                <div class="measurement-value" id="m-forehead">-</div>
+              </div>
+              <div class="measurement-card" id="m-row-cheek">
+                <div class="measurement-label">Cheekbone Width</div>
+                <div class="measurement-value" id="m-cheek">-</div>
+              </div>
+              <div class="measurement-card" id="m-row-jaw">
+                <div class="measurement-label">Jaw Width</div>
+                <div class="measurement-value" id="m-jaw">-</div>
+              </div>
+              <div class="measurement-card" id="m-row-length">
+                <div class="measurement-label">Face Length</div>
+                <div class="measurement-value" id="m-length">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="suggestions-section">
+            <div class="suggestions-header">
+              <h3 class="suggestions-title">💇 Recommended Hairstyles</h3>
+              <p class="suggestions-subtitle">Perfect matches for your unique face shape</p>
+            </div>
+            <div id="suggestions" class="suggestions-grid"></div>
+            <div id="no-suggestions" class="no-suggestions" hidden>
+              <p>We couldn't find perfect matches. Try a different photo or check back later!</p>
+            </div>
+          </div>
+          </div>
+        </section>
+
+      </div>
     </main>
+
+    <footer class="footer">
+      <div class="container footer-content">
+        <p class="footer-text">© 2025 AI HairFit. Crafted with 💖 and AI. · <a href="#privacy">Privacy Policy</a> · <a href="#about">About Us</a> · <a href="#contact">Contact Support</a></p>
+      </div>
+    </footer>
+
+    <script>
+      // Decode token from URL if present and store globally
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const rawToken = params.get('token');
+        if (rawToken) {
+          const decodedToken = decodeURIComponent(rawToken);
+          localStorage.setItem('authToken', decodedToken);
+          localStorage.setItem('jwt', decodedToken);
+          params.delete('token');
+          const finalUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+          window.history.replaceState({}, '', finalUrl);
+        }
+      })();
+    </script>
     <script src="script.js"></script>
+    <script>
+      // Logout: clear token and redirect, preventing cached auth
+      (function(){
+        const btn = document.getElementById('logout-btn');
+        if (btn) {
+          btn.addEventListener('click', function(){
+            try {
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('jwt');
+              localStorage.removeItem('userEmail');
+              sessionStorage.clear();
+            } catch (_) {}
+            // Redirect to login page
+            window.location.replace('login.html'); 
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
-

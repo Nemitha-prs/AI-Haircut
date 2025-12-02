@@ -236,3 +236,6 @@ export default { recommendHairstyles, createUserProfile, loadDatabase };
 
 
 
+
+
+

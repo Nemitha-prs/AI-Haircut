@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signup</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="panel">
+      <h1>Signup</h1>
+      <form id="signup-form">
+        <label>Email</label>
+        <input type="email" id="email" required />
+        <label>Password</label>
+        <input type="password" id="password" required minlength="6" />
+        <button type="submit">Create Account</button>
+      </form>
+      <p><a href="login.html">Already have an account? Login</a></p>
+      <p id="status" class="hint"></p>
+    </section>
+  </main>
+  <script>
+    const form = document.getElementById('signup-form');
+    const status = document.getElementById('status');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      try {
+        const token = localStorage.getItem('authToken');
+        const r = await fetch('/auth/signup', {
+          method: 'POST',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+          body: JSON.stringify({ email, password })
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Signup failed');
+        status.textContent = 'Account created. Redirecting to login...';
+        setTimeout(() => { window.location.href = 'login.html'; }, 800);
+      } catch (err) {
+        status.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -8,7 +8,7 @@ const router = express.Router();
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
-const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:8000';
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
 
 const oauth2Client = new OAuth2Client(
   CLIENT_ID,
@@ -66,7 +66,7 @@ router.get('/google/callback', async (req, res) => {
     const token = signToken(user);
 
     // Redirect to frontend with token
-    res.redirect(`${FRONTEND_BASE_URL}/main.html`);
+    res.redirect(`${FRONTEND_BASE_URL}/main.html?token=${token}`);
   } catch (error) {
     console.error('Google auth error:', error);
     res.redirect(`${FRONTEND_BASE_URL}/login.html?error=Google login failed`);

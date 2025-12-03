@@ -65,7 +65,7 @@ router.get('/google/callback', async (req, res) => {
     const token = signToken(user);
 
     // Redirect to frontend with token
-    res.redirect(`/index.html?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_BASE_URL}/index.html`);
   } catch (error) {
     console.error('Google auth error:', error);
     res.redirect('/login.html?error=Google login failed');

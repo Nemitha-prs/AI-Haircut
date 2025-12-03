@@ -8,6 +8,7 @@ const router = express.Router();
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:8000';
 
 const oauth2Client = new OAuth2Client(
   CLIENT_ID,
@@ -30,7 +31,7 @@ router.get('/google/callback', async (req, res) => {
   try {
     const { code } = req.query;
     if (!code) {
-      return res.redirect('/login.html?error=No authorization code');
+      return res.redirect(`${FRONTEND_BASE_URL}/login.html?error=No authorization code`);
     }
 
     // Exchange code for tokens
@@ -46,7 +47,7 @@ router.get('/google/callback', async (req, res) => {
     const email = payload.email;
 
     if (!email) {
-      return res.redirect('/login.html?error=No email from Google');
+      return res.redirect(`${FRONTEND_BASE_URL}/login.html?error=No email from Google`);
     }
 
     // Find or create user
@@ -65,10 +66,10 @@ router.get('/google/callback', async (req, res) => {
     const token = signToken(user);
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_BASE_URL}/index.html`);
+    res.redirect(`${FRONTEND_BASE_URL}/main.html`);
   } catch (error) {
     console.error('Google auth error:', error);
-    res.redirect('/login.html?error=Google login failed');
+    res.redirect(`${FRONTEND_BASE_URL}/login.html?error=Google login failed`);
   }
 });
 

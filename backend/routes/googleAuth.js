@@ -35,7 +35,7 @@ router.get('/google/callback', async (req, res) => {
   try {
     const { code } = req.query;
     if (!code) {
-      return res.redirect(`${FRONTEND_BASE_URL}/login.html?error=No+authorization+code`);
+      return res.redirect(`https://ai-haircut.vercel.app/login.html?error=Google+login+failed`);
     }
 
     const { tokens } = await oauth2Client.getToken(code);
@@ -50,7 +50,7 @@ router.get('/google/callback', async (req, res) => {
     const email = payload?.email;
 
     if (!email) {
-      return res.redirect(`${FRONTEND_BASE_URL}/login.html?error=No+email+from+Google`);
+      return res.redirect(`https://ai-haircut.vercel.app/login.html?error=Google+login+failed`);
     }
 
     let user = await findUserByEmail(email);
@@ -66,10 +66,10 @@ router.get('/google/callback', async (req, res) => {
     const token = signToken(user);
     const encodedToken = encodeURIComponent(token);
 
-    return res.redirect(`${FRONTEND_BASE_URL}/login.html?token=${encodedToken}`);
+    return res.redirect(`https://ai-haircut.vercel.app/login.html?token=${encodedToken}`);
   } catch (error) {
     console.error('[GoogleAuth] Error:', error);
-    return res.redirect(`${FRONTEND_BASE_URL}/login.html?error=Google+login+failed`);
+    return res.redirect(`https://ai-haircut.vercel.app/login.html?error=Google+login+failed`);
   }
 });
 

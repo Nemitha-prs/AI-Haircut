@@ -14,7 +14,7 @@ if (rawToken) {
   urlParams.delete('token');
   const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
   window.history.replaceState({}, '', newUrl);
-  // Redirect to main app
+  // Redirect to main
   window.location.href = 'main.html';
 }
 
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('https://moderate-juliet-nemitha-prs-7cefc1b4.koyeb.app/auth/login', {
+        const response = await fetch('/auth/login', {
           method: 'POST',
           headers: Object.assign(
             { 'Content-Type': 'application/json' },

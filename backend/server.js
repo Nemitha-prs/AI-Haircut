@@ -22,17 +22,12 @@ const { usageLimiter } = await import('./middleware/usageLimiter.js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const frontendDir = path.join(__dirname, '..', 'frontend');
-
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend
-app.use(express.static(frontendDir));
-app.get('/', (_req, res) => res.sendFile(path.join(frontendDir, 'index.html')));
-// Direct routes for key pages
-app.get('/login', (_req, res) => res.sendFile(path.join(frontendDir, 'login.html')));
-app.get('/signup', (_req, res) => res.sendFile(path.join(frontendDir, 'signup.html')));
+app.get('/', (_req, res) => {
+	res.json({ status: 'Backend running' });
+});
 
 // Auth routes (appended safely)
 app.use('/auth', authRouter);

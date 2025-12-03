@@ -14,8 +14,8 @@ if (rawToken) {
   urlParams.delete('token');
   const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
   window.history.replaceState({}, '', newUrl);
-  // Redirect to index
-  window.location.href = 'index.html';
+  // Redirect to main app
+  window.location.href = 'main.html';
 }
 
 // Display URL error if exists (only for OAuth errors, not login failures)
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showSuccess('Login successful!');
         
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.href = 'main.html';
         }, 1500);
 
       } catch (err) {

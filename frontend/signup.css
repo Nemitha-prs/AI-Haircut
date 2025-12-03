@@ -6,19 +6,23 @@
 }
 
 html {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
 }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #0d0d0d;
   color: #ccc;
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden; /* Prevents scrollbars */
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevents horizontal scrollbars */
   position: relative;
 }
 

@@ -6,7 +6,7 @@
     "freeDailyScans": "Infinity",
     "attemptsToday": "Infinity",
     "lastScanDate": "2025-12-03",
-    "failedLoginAttempts": 1,
+    "failedLoginAttempts": 0,
     "lockUntil": null,
     "unlimited": true
   },

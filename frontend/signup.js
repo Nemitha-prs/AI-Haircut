@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const verifyCodeBtn = document.getElementById('verify-code-btn');
   const verificationInput = document.getElementById('verification-code');
   const verificationStatus = document.getElementById('verificationStatus');
+  const API_BASE_URL = 'https://moderate-juliet-nemitha-prs-7cefc1b4.koyeb.app';
+  const AUTH_BASE_URL = `${API_BASE_URL}/auth`;
 
   const STRONG_EMAIL_REGEX = /^(?![_.-])(?!.*[_.-]{2})([A-Za-z0-9._%+-]{1,64})@([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/;
   const CODE_REGEX = /^\d{6}$/;
@@ -209,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setButtonLoading(true);
 
       try {
-        const response = await fetch('/auth/signup', {
+        const response = await fetch(`${AUTH_BASE_URL}/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }) // Full name is not sent to backend as per instructions
@@ -294,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const response = await fetch('/auth/send-code', {
+      const response = await fetch(`${AUTH_BASE_URL}/send-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -342,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const response = await fetch('/auth/verify-code', {
+      const response = await fetch(`${AUTH_BASE_URL}/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code })

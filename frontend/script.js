@@ -48,7 +48,8 @@ const measurementsWrap = document.getElementById('measurements');
 const confidenceRow = document.getElementById('confidence-row');
 const ageRow = document.getElementById('age-row');
 
-const BACKEND_URL = 'http://localhost:3000/analyze';
+const API_BASE_URL = 'https://moderate-juliet-nemitha-prs-7cefc1b4.koyeb.app';
+const BACKEND_URL = `${API_BASE_URL}/analyze`;
 let UPLOAD_CONSTRAINTS = null;
 
 // Global token check
@@ -63,7 +64,7 @@ let UPLOAD_CONSTRAINTS = null;
 async function fetchConstraints() {
   try {
     const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-    const r = await fetch('http://localhost:3000/api/constraints', {
+    const r = await fetch(`${API_BASE_URL}/api/constraints`, {
       headers: token ? { Authorization: 'Bearer ' + token } : undefined
     });
     if (r.ok) UPLOAD_CONSTRAINTS = await r.json();

@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('/auth/login', {
+        const response = await fetch('https://moderate-juliet-nemitha-prs-7cefc1b4.koyeb.app/auth/login', {
           method: 'POST',
           headers: Object.assign(
             { 'Content-Type': 'application/json' },
